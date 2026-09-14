@@ -115,6 +115,19 @@ else:
 AUTHOR = 'Igor Brzezek'; VERSION = "1.20"; DATE = '08.02.2026'
 USER_AGENT_HEADER = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, browser: chrome) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36"
 
+def _find_ytdlp():
+    import shutil
+    if shutil.which('yt-dlp'):
+        return ['yt-dlp']
+    try:
+        subprocess.check_output([sys.executable, '-m', 'yt_dlp', '--version'], stderr=subprocess.DEVNULL)
+        return [sys.executable, '-m', 'yt_dlp']
+    except Exception:
+        pass
+    return ['yt-dlp']
+
+_YTDLP = _find_ytdlp()
+
 class DownloadState:
     def __init__(self):
         self.stream_type = "video"
@@ -285,7 +298,7 @@ def create_arg_parser():
 def get_ytdlp_version():
     """Get the current installed yt-dlp version."""
     try:
-        result = subprocess.check_output(['yt-dlp', '--version'], stderr=subprocess.DEVNULL, universal_newlines=True)
+        result = subprocess.check_output(list(_YTDLP) + ['--version'], stderr=subprocess.DEVNULL, universal_newlines=True)
         return result.strip()
     except Exception as e:
         return f"Error: cannot get version ({e})"
@@ -309,7 +322,7 @@ def update_ytdlp():
         if platform == 'win32':
             # Windows: use pip or yt-dlp -U
             print("Updating yt-dlp for Windows...")
-            result = subprocess.run(['yt-dlp', '-U'], capture_output=True, text=True)
+            result = subprocess.run(list(_YTDLP) + ['-U'], capture_output=True, text=True)
             if result.returncode != 0:
                 # Fallback to pip
                 print("Trying to update via pip...")
@@ -601,7 +614,7 @@ def main():
         final_filepath = None 
 
         try:
-            info_cmd = ['yt-dlp', '--no-warnings', '--dump-json', '--no-playlist', url]
+            info_cmd = list(_YTDLP) + ['--no-warnings', '--dump-json', '--no-playlist', url]
             if args.cookies: info_cmd.extend(['--cookies-from-browser', args.cookies])
             if args.add_header: info_cmd.extend(['--user-agent', USER_AGENT_HEADER])
             if args.limit_rate: info_cmd.extend(['--limit-rate', args.limit_rate])
@@ -693,7 +706,7 @@ def main():
                 video_format = "bestvideo[height<=720]+bestaudio/best[height<=720]" if args.mp4fast else \
                                "bestvideo[height<=1080]+bestaudio/best[height<=1080]" if args.mp41080 else \
                                "bestvideo[height<=480]+bestaudio/best[height<=480]"
-                cmd = ['yt-dlp', '--no-warnings', '--progress', '-f', video_format, '--merge-output-format', 'mp4', '-o', str(final_filepath), url]
+                cmd = list(_YTDLP) + ['--no-warnings', '--progress', '-f', video_format, '--merge-output-format', 'mp4', '-o', str(final_filepath), url]
                 if args.add_header: cmd.extend(['--user-agent', USER_AGENT_HEADER])
                 if args.limit_rate: cmd.extend(['--limit-rate', args.limit_rate])
                 if args.overwrite: cmd.append('--force-overwrites')
@@ -710,7 +723,7 @@ def main():
                         error_count += 1
             else:
                 temp_path = destination_dir / f"ytextr_tmp_{os.getpid()}_{i}.%(ext)s"
-                dl_cmd = ['yt-dlp', '--no-warnings', '--progress', '-f', 'bestaudio', '-o', str(temp_path), url]
+                dl_cmd = list(_YTDLP) + ['--no-warnings', '--progress', '-f', 'bestaudio', '-o', str(temp_path), url]
                 if args.add_header: dl_cmd.extend(['--user-agent', USER_AGENT_HEADER])
                 if args.limit_rate: dl_cmd.extend(['--limit-rate', args.limit_rate])
                 if args.overwrite: dl_cmd.append('--force-overwrites')

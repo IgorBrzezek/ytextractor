@@ -1,0 +1,9 @@
+__pycache__/
+*.tmp
+*.bak
+*.txt
+*.mp3
+*.mp4
+*.part
+*.webp
+*.webm
